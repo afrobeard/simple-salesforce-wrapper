@@ -5,6 +5,7 @@ setup(
     name='simple-salesforce-wrapper',
     version='0.01.0',
     author='Iqbal Talaat',
+    author_email='iqbaltalaat@gmail.com',
     maintainer='Iqbal Talaat',
     maintainer_email='iqbaltalaat@gmail.com',
     packages=['simple_salesforce_wrapper'],

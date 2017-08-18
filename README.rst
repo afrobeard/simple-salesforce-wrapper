@@ -13,6 +13,13 @@ You can find out more regarding the format of the results in the `Official Sales
 99% of the Documentation is plagiarized from simple-salesforce. This module does not do much, it just serves me well.
 Simple Salesforce is available here: https://github.com/simple-salesforce/simple-salesforce
 
+Installation
+------------
+
+.. code-block:: bash
+
+    pip3 install simple_salesforce_wrapper
+
 Example
 -------
 There are two ways to gain access to Salesforce

@@ -8,7 +8,7 @@ setup(
     maintainer='Iqbal Talaat',
     maintainer_email='iqbaltalaat@gmail.com',
     packages=['simple-salesforce-wrapper'],
-    url='https://github.com/simple-salesforce/simple-salesforce',
+    url='https://github.com/afrobeard/simple-salesforce-wrapper',
     license='Apache 2.0',
     description=("Simple Salesforce is a basic Salesforce.com REST API client. "
                  "The goal is to provide a very low-level interface to the API, "

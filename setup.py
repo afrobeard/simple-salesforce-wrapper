@@ -3,13 +3,13 @@ import textwrap
 
 setup(
     name='simple-salesforce-wrapper',
-    version='0.01.0',
+    version='0.02.0',
     author='Iqbal Talaat',
     author_email='iqbaltalaat@gmail.com',
     maintainer='Iqbal Talaat',
     maintainer_email='iqbaltalaat@gmail.com',
     packages=['simple_salesforce_wrapper'],
-    url='https://github.com/afrobeard/simple_salesforce_wrapper',
+    url='https://github.com/afrobeard/simple-salesforce-wrapper',
     license='Apache 2.0',
     description=("Simple Salesforce is a basic Salesforce.com REST API client. "
                  "The goal is to provide a very low-level interface to the API, "

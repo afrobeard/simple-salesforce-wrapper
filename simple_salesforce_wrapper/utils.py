@@ -78,17 +78,12 @@ def convert_lead(
 
 if __name__ == "__main__":
     SALESFORCE_INSTANCE = {
-        "username": "appsfapiuser@zenbusiness.com.sandbox",
-        "password": "zenbizapi1",
-        "security_token": "pgCW9I8UrLjEKP3obv9rRKUv",
-        "sandbox": True,
+        "username": "EMAIL@EXAMPLE.COM",
+        "password": "EXAMPLEPASSWORD",
+        "security_token": "SECURITY_TOKEN",
+        "domain": "Test",
     }
-    sf = Salesforce(
-        username=SALESFORCE_INSTANCE.get("username"),
-        password=SALESFORCE_INSTANCE.get("password"),
-        security_token=SALESFORCE_INSTANCE.get("security_token"),
-        sandbox=SALESFORCE_INSTANCE.get("sandbox"),
-    )
+    sf = Salesforce(**SALESFORCE_INSTANCE)
     resp = convert_lead(
         sf.session,
         sf.session_id,

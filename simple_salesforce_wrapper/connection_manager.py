@@ -47,12 +47,10 @@ class SalesForceObjectMock(object):
 
 
 class SalesForceConnection(object):
-    def __init__(self, username, password, security_token, sandbox):
+    def __init__(self, *args, **kwargs):
         self.sf = None
-        (self.username,
-         self.password,
-         self.security_token,
-         self.sandbox) = (username, password, security_token, sandbox)
+        self.init_args = args
+        self.init_kwargs = kwargs
         self.connect()
 
     def connect(self, debug=False):
@@ -61,36 +59,45 @@ class SalesForceConnection(object):
                 print("SF Object exists session ID {}".format(self.sf.session_id))
             else:
                 print("No preexisting SF Object. Will try to create")
-        self.sf = Salesforce(username=self.username,
-                             password=self.password,
-                             security_token=self.security_token,
-                             sandbox=self.sandbox)
+        self.sf = Salesforce(*self.init_args, **self.init_kwargs)
         if debug:
             print("Reconnect successful. New Session ID {}".format(self.sf.session_id))
 
     def convert_lead(self, lead_id, account_id):
         try:
-            contact_id = convert_lead(self.sf.session, self.sf.session_id,
-                                      sandbox=self.sf.sandbox, proxies=self.sf.proxies,
-                                      sf_version=self.sf.sf_version, sf_instance=self.sf.sf_instance,
-                                      lead_id=lead_id, account_id=account_id)
+            contact_id = convert_lead(
+                self.sf.session,
+                self.sf.session_id,
+                sandbox=self.sf.sandbox,
+                proxies=self.sf.proxies,
+                sf_version=self.sf.sf_version,
+                sf_instance=self.sf.sf_instance,
+                lead_id=lead_id,
+                account_id=account_id,
+            )
             return contact_id
         except SalesforceExpiredSession:
             print("Expired Salesforcesession, trying reconnection")
             self.reconnect()
-            (status, code_or_id) = convert_lead(self.sf.session, self.sf.session_id,
-                                                sandbox=self.sf.sandbox, proxies=self.sf.proxies,
-                                                sf_version=self.sf.sf_version, sf_instance=self.sf.sf_instance,
-                                                lead_id=lead_id, account_id=account_id)
+            (status, code_or_id) = convert_lead(
+                self.sf.session,
+                self.sf.session_id,
+                sandbox=self.sf.sandbox,
+                proxies=self.sf.proxies,
+                sf_version=self.sf.sf_version,
+                sf_instance=self.sf.sf_instance,
+                lead_id=lead_id,
+                account_id=account_id,
+            )
             return status, code_or_id
 
     def query(self, query_string):
         """
         Access of the form where there is an underlying object connection
-        e.g. 
-        
-        sf.query        
-        :return: 
+        e.g.
+
+        sf.query
+        :return:
         """
         try:
             return self.sf.query(query_string)
@@ -102,15 +109,15 @@ class SalesForceConnection(object):
     def __getattr__(self, name):
         """
         Access of the form where there is an underlying object connection
-        e.g. 
-        
+        e.g.
+
         sf.query
         sf.Object.create
         sf.Object.update
         sf.Object.remove
-        
-        :param name 
-        :return: 
+
+        :param name
+        :return:
         """
         try:
             return SalesForceObjectMock(self.sf, name, self)

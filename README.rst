@@ -20,8 +20,8 @@ Installation
 
     pip3 install simple_salesforce_wrapper
 
-Example
--------
+Examples
+--------------------------
 There are two ways to gain access to Salesforce
 
 The first is to simply pass the domain of your Salesforce instance and an access token straight to ``Salesforce()``
@@ -30,7 +30,7 @@ For example:
 
 .. code-block:: python
 
-    from simple_salesforce_wrapper import Salesforce
+    from simple_salesforce import Salesforce
     sf = Salesforce(instance='na1.salesforce.com', session_id='')
 
 If you have the full URL of your instance (perhaps including the schema, as is included in the OAuth2 request process), you can pass that in instead using ``instance_url``:
@@ -40,7 +40,7 @@ If you have the full URL of your instance (perhaps including the schema, as is i
     from simple_salesforce_wrapper import Salesforce
     sf = Salesforce(instance_url='https://na1.salesforce.com', session_id='')
 
-There are also two means of authentication, one that uses username, password and security token and the other that uses IP filtering, username, password  and organizationId
+There are also three means of authentication, one that uses username, password and security token; one that uses IP filtering, username, password  and organizationId; and the other that uses a private key to sign a JWT.
 
 To login using the security token method, simply include the Salesforce method and pass in your Salesforce username, password and token (this is usually provided when you change your password):
 
@@ -56,29 +56,36 @@ To login using IP-whitelist Organization ID method, simply use your Salesforce u
     from simple_salesforce_wrapper import Salesforce
     sf = Salesforce(password='password', username='myemail@example.com', organizationId='OrgId')
 
-If you'd like to enter a sandbox, simply add ``sandbox=True`` to your ``Salesforce()`` call.
+To login using the JWT method, use your Salesforce username, consumer key from your app, and private key:
+
+.. code-block:: python
+
+    from simple_salesforce_wrapper import Salesforce
+    sf = Salesforce(username='myemail@example.com', consumer_key='XYZ', privatekey_file='filename.key')
+
+If you'd like to enter a sandbox, simply add ``domain='test'`` to your ``Salesforce()`` call.
 
 For example:
 
 .. code-block:: python
 
     from simple_salesforce_wrapper import Salesforce
-    sf = Salesforce(username='myemail@example.com.sandbox', password='password', security_token='token', sandbox=True)
+    sf = Salesforce(username='myemail@example.com.sandbox', password='password', security_token='token', domain='test')
 
-Note that specifying if you want to use a sandbox is only necessary if you are using the built-in username/password/security token authentication and is used exclusively during the authentication step.
+Note that specifying if you want to use a domain is only necessary if you are using the built-in username/password/security token authentication and is used exclusively during the authentication step.
 
 If you'd like to keep track where your API calls are coming from, simply add ``client_id='My App'`` to your ``Salesforce()`` call.
 
 .. code-block:: python
 
     from simple_salesforce_wrapper import Salesforce
-    sf = Salesforce(username='myemail@example.com.sandbox', password='password', security_token='token', sandbox=True, client_id='My App')
+    sf = Salesforce(username='myemail@example.com.sandbox', password='password', security_token='token', client_id='My App', domain='test')
 
 If you view the API calls in your Salesforce instance by Client Id it will be prefixed with ``RestForce/``, for example ``RestForce/My App``.
 
 When instantiating a `Salesforce` object, it's also possible to include an
 instance of `requests.Session`. This is to allow for specialized
-session handling not otherwise exposed by simple_salesforce_wrapper.
+session handling not otherwise exposed by simple_salesforce.
 
 For example:
 
@@ -94,7 +101,7 @@ For example:
       session=session)
 
 Record Management
------------------
+--------------------------
 
 To create a new 'Contact' in Salesforce:
 
@@ -128,7 +135,7 @@ To delete the contact:
 
     sf.Contact.delete('003e0000003GuNXAA0')
 
-To retrieve a list of deleted records between ``2013-10-20`` to ``2013-10-29`` (datetimes are required to be in UTC):
+To retrieve a list of Contact records deleted over the past 10 days (datetimes are required to be in UTC):
 
 .. code-block:: python
 
@@ -137,7 +144,7 @@ To retrieve a list of deleted records between ``2013-10-20`` to ``2013-10-29`` (
     end = datetime.datetime.now(pytz.UTC)  # we need to use UTC as salesforce API requires this!
     sf.Contact.deleted(end - datetime.timedelta(days=10), end)
 
-To retrieve a list of updated records between ``2014-03-20`` to ``2014-03-22`` (datetimes are required to be in UTC):
+To retrieve a list of Contact records updated over the past 10 days (datetimes are required to be in UTC):
 
 .. code-block:: python
 
@@ -148,8 +155,6 @@ To retrieve a list of updated records between ``2014-03-20`` to ``2014-03-22`` (
 
 Note that Update, Delete and Upsert actions return the associated `Salesforce HTTP Status Code`_
 
-.. _Salesforce HTTP Status Code: http://www.salesforce.com/us/developer/docs/api_rest/Content/errorcodes.htm
-
 Use the same format to create any record, including 'Account', 'Opportunity', and 'Lead'.
 Make sure to have all the required fields for any entry. The `Salesforce API`_ has all objects found under 'Reference -> Standard Objects' and the required fields can be found there.
 
@@ -157,7 +162,7 @@ Make sure to have all the required fields for any entry. The `Salesforce API`_ h
 .. _Salesforce API: https://www.salesforce.com/developer/docs/api/
 
 Queries
--------
+--------------------------
 
 It's also possible to write select queries in Salesforce Object Query Language (SOQL) and search queries in Salesforce Object Search Language (SOSL).
 
@@ -179,6 +184,34 @@ As a convenience, to retrieve all of the results in a single local method call u
 .. code-block:: python
 
     sf.query_all("SELECT Id, Email FROM Contact WHERE LastName = 'Jones'")
+
+While ``query_all`` materializes the whole result into a Python list, ``query_all_iter`` returns an iterator, which allows you to lazily process each element separately
+
+.. code-block:: python
+
+    data = sf.query_all_iter("SELECT Id, Email FROM Contact WHERE LastName = 'Jones'")
+    for row in data:
+      process(row)
+
+Values used in SOQL queries can be quoted and escaped using ``format_soql``:
+
+.. code-block:: python
+
+    sf.query(format_soql("SELECT Id, Email FROM Contact WHERE LastName = {}", "Jones"))
+    sf.query(format_soql("SELECT Id, Email FROM Contact WHERE LastName = {last_name}", last_name="Jones"))
+    sf.query(format_soql("SELECT Id, Email FROM Contact WHERE LastName IN {names}", names=["Smith", "Jones"]))
+
+To skip quoting and escaping for one value while still using the format string, use ``:literal``:
+
+.. code-block:: python
+
+    sf.query(format_soql("SELECT Id, Email FROM Contact WHERE Income > {:literal}", "USD100"))
+
+To escape a substring used in a LIKE expression while being able to use % around it, use ``:like``:
+
+.. code-block:: python
+
+    sf.query(format_soql("SELECT Id, Email FROM Contact WHERE Name LIKE '{:like}%'", "Jones"))
 
 SOSL queries are done via:
 
@@ -210,13 +243,19 @@ If convert_success is True then so is convert_response is the contact ID
 If convert_success is False then so is convert_response is the error code e.g. CANNOT_UPDATE_CONVERTED_LEAD
 
 Other Options
--------------
+--------------------------
 
 To insert or update (upsert) a record using an external ID, use:
 
 .. code-block:: python
 
     sf.Contact.upsert('customExtIdField__c/11999',{'LastName': 'Smith','Email': 'smith@example.com'})
+
+To format an external ID that could contain non-URL-safe characters, use:
+
+.. code-block:: python
+
+    external_id = format_external_id('customExtIdField__c', 'this/that & the other')
 
 To retrieve basic metadata use:
 
@@ -247,33 +286,43 @@ To retrieve a list of top level description of instance metadata, user:
 
 
 Using Bulk
-----------
+--------------------------
 
-You can use this library to access Bulk API functions.
+You can use this library to access Bulk API functions. The data element can be a list of records of any size and by default batch sizes are 10,000 records and run in parrallel concurrency mode. To set the batch size for insert, upsert, delete, hard_delete, and update use the batch_size argument. To set the concurrency mode for the salesforce job the use_serial argument can be set to use_serial=True.
 
 Create new records:
 
 .. code-block:: python
 
-    data = [{'LastName':'Smith','Email':'example@example.com'}, {'LastName':'Jones','Email':'test@test.com'}]
+    data = [
+          {'LastName':'Smith','Email':'example@example.com'},
+          {'LastName':'Jones','Email':'test@test.com'}
+        ]
 
-    sf.bulk.Contact.insert(data)
+    sf.bulk.Contact.insert(data,batch_size=10000,use_serial=True)
 
 Update existing records:
 
 .. code-block:: python
 
-    data = [{'Id': '0000000000AAAAA', 'Email': 'examplenew@example.com'}, {'Id': '0000000000BBBBB', 'Email': 'testnew@test.com'}]
+    data = [
+          {'Id': '0000000000AAAAA', 'Email': 'examplenew@example.com'},
+          {'Id': '0000000000BBBBB', 'Email': 'testnew@test.com'}
+        ]
 
-    sf.bulk.Contact.update(data)
+    sf.bulk.Contact.update(data,batch_size=10000,use_serial=True)
 
 Upsert records:
 
 .. code-block:: python
 
-    data = [{'Id': '0000000000AAAAA', 'Email': 'examplenew2@example.com'}, {'Id': '', 'Email': 'foo@foo.com'}]
+    data = [
+          {'Id': '0000000000AAAAA', 'Email': 'examplenew2@example.com'},
+          {'Email': 'foo@foo.com'}
+        ]
 
-    sf.bulk.Contact.upsert(data, 'Id')
+    sf.bulk.Contact.upsert(data, 'Id', batch_size=10000, use_serial=True)
+
 
 Query records:
 
@@ -283,13 +332,51 @@ Query records:
 
     sf.bulk.Account.query(query)
 
+To retrieve large amounts of data, use
+
+.. code-block:: python
+
+    query = 'SELECT Id, Name FROM Account'
+
+    # generator on the results page
+    fetch_results = sf.bulk.Account.query(query, lazy_operation=True)
+
+    # the generator provides the list of results for every call to next()
+    all_results = []
+    for list_results in fetch_results:
+      all_results.extend(list_results)
+
+Query all records:
+
+QueryAll will return records that have been deleted because of a merge or delete. QueryAll will also return information about archived Task and Event records.
+
+.. code-block:: python
+
+    query = 'SELECT Id, Name FROM Account LIMIT 10'
+
+    sf.bulk.Account.query_all(query)
+
+To retrieve large amounts of data, use
+
+.. code-block:: python
+
+    query = 'SELECT Id, Name FROM Account'
+
+    # generator on the results page
+    fetch_results = sf.bulk.Account.query_all(query, lazy_operation=True)
+
+    # the generator provides the list of results for every call to next()
+    all_results = []
+    for list_results in fetch_results:
+      all_results.extend(list_results)
+
 Delete records (soft deletion):
 
 .. code-block:: python
 
     data = [{'Id': '0000000000AAAAA'}]
 
-    sf.bulk.Contact.delete(data)
+    sf.bulk.Contact.delete(data,batch_size=10000,use_serial=True)
 
 Hard deletion:
 
@@ -297,11 +384,11 @@ Hard deletion:
 
     data = [{'Id': '0000000000BBBBB'}]
 
-    sf.bulk.Contact.hard_delete(data)
+    sf.bulk.Contact.hard_delete(data,batch_size=10000,use_serial=True)
 
 
 Using Apex
-----------
+--------------------------
 
 You can also use this library to call custom Apex methods:
 
@@ -319,27 +406,27 @@ the body content encoded with ``json.dumps``
 
 You can read more about Apex on the `Force.com Apex Code Developer's Guide`_
 
-.. _Force.com Apex Code Developer's Guide: http://www.salesforce.com/us/developer/docs/apexcode
+.. _Force.com Apex Code Developer's Guide: https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_dev_guide.htm
 
 Additional Features
--------------------
+--------------------------
 
 There are a few helper classes that are used internally and available to you.
 
-Included in them are ``SalesforceLogin``, which takes in a username, password, security token, optional boolean sandbox indicator and optional version and returns a tuple of ``(session_id, sf_instance)`` where `session_id` is the session ID to use for authentication to Salesforce and ``sf_instance`` is the domain of the instance of Salesforce to use for the session.
+Included in them are ``SalesforceLogin``, which takes in a username, password, security token, optional version and optional domain and returns a tuple of ``(session_id, sf_instance)`` where `session_id` is the session ID to use for authentication to Salesforce and ``sf_instance`` is the domain of the instance of Salesforce to use for the session.
 
 For example, to use SalesforceLogin for a sandbox account you'd use:
 
 .. code-block:: python
 
-    from simple_salesforce_wrapp import SalesforceLogin
+    from simple_salesforce_wrapper import SalesforceLogin
     session_id, instance = SalesforceLogin(
         username='myemail@example.com.sandbox',
         password='password',
         security_token='token',
-        sandbox=True)
+        domain='test')
 
-Simply leave off the final ``True`` if you do not wish to use a sandbox.
+Simply leave off the final domain if you do not wish to use a sandbox.
 
 Also exposed is the ``SFType`` class, which is used internally by the ``__getattr__()`` method in the ``Salesforce()`` class and represents a specific SObject type. ``SFType`` requires ``object_name`` (i.e. ``Contact``), ``session_id`` (an authentication ID), ``sf_instance`` (hostname of your Salesforce instance), and an optional ``sf_version``
 
@@ -363,3 +450,60 @@ The proxy argument is the same as what requests uses, a map of scheme to proxy U
     SalesForce(instance='na1.salesforce.com', session_id='', proxies=proxies)
 
 All results are returned as JSON converted OrderedDict to preserve order of keys from REST responses.
+
+Helpful Datetime Resources
+--------------------------
+A list of helpful resources when working with datetime/dates from Salesforce
+
+Convert SFDC Datetime to Datetime or Date object
+.. code-block:: python
+
+    import datetime
+    # Formatting to SFDC datetime
+    formatted_datetime =  datetime.datetime.strptime(x, "%Y-%m-%dT%H:%M:%S.%f%z")
+
+    #Formatting to SFDC date
+    formatted_date = datetime.strptime(x, "%Y-%m-%d")
+
+Helpful Pandas Resources
+--------------------------
+A list of helpful resources when working with Pandas and simple-salesforce
+
+Generate list for SFDC Query "IN" operations from a Pandas Dataframe
+
+.. code-block:: python
+
+ import pandas as pd
+
+ df = pd.DataFrame([{'Id':1},{'Id':2},{'Id':3}])
+    def dataframe_to_sfdc_list(df,column):
+      df_list = df[column].unique()
+      df_list = [str(x) for x in df_list]
+      df_list = ','.join("'"+item+"'" for item in df_list)
+      return df_list
+
+   sf.query(format_soql("SELECT Id, Email FROM Contact WHERE Id IN ({})", dataframe_to_sfdc_list(df,column)))
+
+Generate Pandas Dataframe from SFDC API Query (ex.query,query_all)
+
+.. code-block:: python
+
+   import pandas as pd
+
+   sf.query("SELECT Id, Email FROM Contact")
+
+   df = pd.DataFrame(data['records']).drop(['attributes'],axis=1)
+
+Generate Pandas Dataframe from SFDC Bulk API Query (ex.bulk.Account.query)
+
+.. code-block:: python
+
+   import pandas as pd
+
+   sf.bulk.Account.query("SELECT Id, Email FROM Contact")
+   df = pd.DataFrame.from_dict(data,orient='columns').drop('attributes',axis=1)
+
+License
+--------------------------
+
+This package is released under an open source Apache 2.0 license like https://github.com/simple-salesforce/simple-salesforce

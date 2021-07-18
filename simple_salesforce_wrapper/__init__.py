@@ -19,7 +19,9 @@ def quick_regression(salesforce_obj):
     print(repr(account_obj))
     sfid = account_obj.get("id")
     print("Retreiving Object {}", repr(salesforce_obj.Account.get(sfid)))
-    updated_account_obj = salesforce_obj.Account.update(sfid, {"ShippingCity": "NewCastle"})
+    updated_account_obj = salesforce_obj.Account.update(
+        sfid, {"ShippingCity": "NewCastle"}
+    )
     print(repr(updated_account_obj))
     print("Retreiving Object {}", repr(salesforce_obj.Account.get(sfid)))
     print(repr(salesforce_obj.Account.delete(sfid)))
@@ -28,15 +30,13 @@ def quick_regression(salesforce_obj):
     except SalesforceResourceNotFound:
         print("Success. The resource is not found")
 
+
 if __name__ == "__main__":
     SALESFORCE_INSTANCE = {
-        "username": 'EMAIL@EXAMPLE.COM',
-        "password": 'EXAMPLEPASSWORD',
-        "security_token": 'SECURITY_TOKEN',
-        "sandbox": True
+        "username": "EMAIL@EXAMPLE.COM",
+        "password": "EXAMPLEPASSWORD",
+        "security_token": "SECURITY_TOKEN",
+        "domain": "Test",
     }
-    sf = Salesforce(username=SALESFORCE_INSTANCE.get("username"),
-                    password=SALESFORCE_INSTANCE.get("password"),
-                    security_token=SALESFORCE_INSTANCE.get("security_token"),
-                    sandbox=SALESFORCE_INSTANCE.get("sandbox"))
+    sf = Salesforce(**SALESFORCE_INSTANCE)
     quick_regression(sf)

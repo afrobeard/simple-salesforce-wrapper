@@ -7,8 +7,8 @@ def convert_lead(
     session,
     session_id,
     lead_id,
-    account_id,
     sf_instance,
+    account_id=None,
     lead_status="Closed Won",
     sandbox=False,
     proxies=None,
@@ -19,7 +19,11 @@ def convert_lead(
     soap_url = soap_url.format(
         domain=domain, sf_version=sf_version, sf_instance=sf_instance
     )
-    # <?xml version="1.0" encoding="utf-8"?>
+
+    account_id_block = ""
+    if account_id:
+        account_id_block = "<urn:accountId>{account_id}</urn:accountId>".format(account_id=account_id)
+
     login_soap_request_body = """
     <soapenv:Envelope
                 xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
@@ -34,7 +38,8 @@ def convert_lead(
             <urn:leadConverts> <!-- Zero or more repetitions -->
                <urn:convertedStatus>{lead_status}</urn:convertedStatus>
                <urn:leadId>{lead_id}</urn:leadId>
-               <urn:accountId>{account_id}</urn:accountId>
+               {account_id_block}
+               <urn:convertedStatus>{lead_status}</urn:convertedStatus>
                <urn:sendNotificationEmail>true</urn:sendNotificationEmail>
                <urn:doNotCreateOpportunity>true</urn:doNotCreateOpportunity>
             </urn:leadConverts>
@@ -43,7 +48,7 @@ def convert_lead(
     </soapenv:Envelope>
     """.format(
         lead_id=lead_id,
-        account_id=account_id,
+        account_id_block=account_id_block,
         session_id=session_id,
         lead_status=lead_status,
     )
@@ -87,6 +92,7 @@ if __name__ == "__main__":
     resp = convert_lead(
         sf.session,
         sf.session_id,
+        lead_status="Qualified",
         sandbox=sf.sandbox,
         proxies=sf.proxies,
         sf_version=sf.sf_version,

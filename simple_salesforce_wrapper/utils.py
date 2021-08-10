@@ -1,3 +1,5 @@
+from xml.etree import ElementTree
+
 from simple_salesforce import Salesforce
 from simple_salesforce.exceptions import SalesforceAuthenticationFailed
 from simple_salesforce.util import getUniqueElementValueFromXmlString
@@ -72,13 +74,31 @@ def convert_lead(
         )
         raise SalesforceAuthenticationFailed(except_code, except_msg)
     else:
-        contact_id = getUniqueElementValueFromXmlString(response.content, "contactId")
-        success = getUniqueElementValueFromXmlString(response.content, "success")
-        status_code = getUniqueElementValueFromXmlString(response.content, "statusCode")
+        response_xml = ElementTree.fromstring(response.content)
+        success = get_xml_value_by_path(response_xml, ('soapenv:Body', 'default:convertLeadResponse', 'default:result',
+                                                       'default:success'))
         if success == "true":
+            contact_id = get_xml_value_by_path(response_xml, ('soapenv:Body', 'default:convertLeadResponse',
+                                                              'default:result', 'default:contactId'))
             return True, contact_id
         else:
+            status_code = get_xml_value_by_path(response_xml, ('soapenv:Body', 'default:convertLeadResponse',
+                                                               'default:result', 'default:errors',
+                                                               'default:statusCode'))
             return False, status_code
+
+
+def get_xml_value_by_path(xml_doc, path):
+    # As provided in the Salesforce SOAP response
+    namespaces = {'soapenv': 'http://schemas.xmlsoap.org/soap/envelope/',
+                  'default': 'urn:partner.soap.sforce.com'}
+    element = xml_doc
+    for step in path:
+        elements = element.findall(step, namespaces=namespaces)
+        if not elements:
+            return None
+        element = elements[0]
+    return element.text
 
 
 if __name__ == "__main__":
